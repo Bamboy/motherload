@@ -10,3 +10,4 @@ public enum Edges
 	Right = 16,
 	Left = 32
 }
+

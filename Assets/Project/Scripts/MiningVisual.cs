@@ -9,10 +9,21 @@ public class MiningVisual : MonoBehaviour
 
 	new private SpriteRenderer renderer;
 
-
+	public ParticleSystem dirtSpawner;
+	public float dirtRate = 8.5f;
 	void Start () 
 	{
 		renderer = GetComponent<SpriteRenderer>();
+		dirtSpawner = GetComponentInChildren<ParticleSystem>();
+	}
+
+	void Update()
+	{
+		if( visible )
+		{
+			Vector3 pos = GameManager.singleton.player.transform.position;
+			dirtSpawner.transform.position = new Vector3( pos.x, pos.y, -5f );
+		}
 	}
 
 	private bool _visible;
@@ -20,6 +31,19 @@ public class MiningVisual : MonoBehaviour
 		get{ return _visible; }
 		set
 		{
+			ParticleSystem.EmissionModule emitter = dirtSpawner.emission;
+			if( value )
+			{
+
+
+			}
+			else
+			{
+
+			}
+
+
+			emitter.rateOverTimeMultiplier = value ? dirtRate : 0f;
 			renderer.enabled = value;
 			_visible = value;
 		}

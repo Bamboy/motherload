@@ -9,6 +9,7 @@ public class CharacterMover : MonoBehaviour
 	public float simulationSpeed = 1f;
 	public float gravity = -9.81f;
 	public float moveSpeed = 2.5f;
+	public float groundDrag = 0.2f;
 
 	[Space]
 	[ShowIf("InPlayMode")] public MovementData movement;
@@ -22,8 +23,26 @@ public class CharacterMover : MonoBehaviour
 	/// Scaled Time.deltaTime
 	private float _deltaTime;
 
+	private bool _simulating = true;
+	public bool isSimulating
+	{
+		get{ return _simulating; }
+		set
+		{
+			if( value == false )
+			{
+				movement = new MovementData( movement );
+				movement.acceleration = new Vector2();
+				movement.velocity = new Vector2();
+			}
+			_simulating = value;
+		}
+	}
+
+
 	void Start()
 	{
+
 		movement.position = new Vector2( transform.position.x, transform.position.y );
 		collider = GetComponent<BoxCollider2D>();
 		 
@@ -34,40 +53,47 @@ public class CharacterMover : MonoBehaviour
 	void Update()
 	{
 		_deltaTime = Time.deltaTime * simulationSpeed;
-
-		//Check edges we are in contact with. Check for changes
-
-		MovementData newMovement = new MovementData( movement ); //Private
-
-
-		Vector2 inputForce = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * moveSpeed * _deltaTime;
-		newMovement.velocity += inputForce;
-
-		collisionSides = GetSurroundings( newMovement.position );
-		CollisionModify( collisionSides, ref newMovement );
-
-		MovementData prediction = Verlet( newMovement, collisionSides.HasFlag( Edges.Below ) ? Vector2.zero : Acceleration() ); //Private
-
-		//NOTE this implementation for collisions is NOT accurate with Verlet!! Need a better solution...
-
-		float distance = Vector2.Distance(movement.position, prediction.position);
-		Vector2 direction = VectorExtras.Direction(movement.position, prediction.position);
-		List<RaycastHit2D> hits = FilterIgnored( ignoredColliders, 
-			Physics2D.BoxCastAll( movement.position, collider.size, 0f, direction, distance ) );
-
-		if( hits.Count > 0 ) //Did we hit something?
+		if( isSimulating )
 		{
-			RaycastHit2D hit = hits[0];
+			//Check edges we are in contact with. Check for changes
 
-			prediction.position = hit.centroid + (hit.normal * bloatSpacing);
+			MovementData newMovement = new MovementData( movement ); //Private
+
+
+			Vector2 inputForce = GameManager.inputAxis * moveSpeed * _deltaTime;
+			newMovement.velocity += inputForce;
+
+			collisionSides = GetSurroundings( newMovement.position );
+			CollisionModify( collisionSides, ref newMovement );
+
+			if( collisionSides.HasFlag( Edges.Below ) )
+			{
+				newMovement.velocity.x = Mathf.MoveTowards(newMovement.velocity.x, 0f, groundDrag);
+			}
+
+			MovementData prediction = Verlet( newMovement, collisionSides.HasFlag( Edges.Below ) ? Vector2.zero : Acceleration() ); //Private
+
+			//NOTE this implementation for collisions is NOT accurate with Verlet!! Need a better solution...
+
+			float distance = Vector2.Distance(movement.position, prediction.position);
+			Vector2 direction = VectorExtras.Direction(movement.position, prediction.position);
+			List<RaycastHit2D> hits = FilterIgnored( ignoredColliders, 
+				Physics2D.BoxCastAll( movement.position, collider.size, 0f, direction, distance ) );
+
+			if( hits.Count > 0 ) //Did we hit something?
+			{
+				RaycastHit2D hit = hits[0];
+
+				prediction.position = hit.centroid + (hit.normal * bloatSpacing);
+			}
+
+			movement = prediction;
+
+			transform.position = new Vector3( movement.position.x, movement.position.y, 0f );
+
+			collisionSides = GetSurroundings( transform.position );
+			ExternalCall( collisionSides );
 		}
-
-		movement = prediction;
-
-		transform.position = new Vector3( movement.position.x, movement.position.y, 0f );
-
-		collisionSides = GetSurroundings( transform.position );
-		ExternalCall( collisionSides );
 	}
 		
 	void CollisionModify( Edges edges, ref MovementData move )

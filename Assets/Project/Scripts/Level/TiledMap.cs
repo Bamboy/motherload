@@ -49,6 +49,15 @@ public class TiledMap : MonoBehaviour
 	{
 		blocks = new byte[Mathf.FloorToInt(mapSize.x), Mathf.FloorToInt(mapSize.y)];
 
+		for (int x = 0; x < blocks.GetLength(0); x++) 
+		{
+			for (int y = 0; y < blocks.GetLength(1); y++) 
+			{
+				//blocks[x,y] = (byte)Random.Range(0,3);
+				blocks[x,y] = (byte)NoiseInt(x,y, 4f, 3f, 1.25f); 
+			}
+		}
+		/*
 		for(int px=0;px<blocks.GetLength(0);px++)
 		{
 			int stone = NoiseInt(px,0, 80,15,1);
@@ -84,7 +93,7 @@ public class TiledMap : MonoBehaviour
 					blocks[px,py]=2;
 				}
 			}
-		}
+		}*/
 	}
 
 	void BuildMesh()
